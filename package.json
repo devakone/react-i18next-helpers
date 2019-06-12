@@ -1,0 +1,26 @@
+{
+  "name": "react-i18next-helpers",
+  "version": "1.0.0",
+  "description": "A set of helper hooks and components to use with i18next, react-i18next and Formik",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devakone/react-i18next-helpers.git"
+  },
+  "keywords": [
+    "i18next",
+    "react-i18next",
+    "formik",
+    "translate",
+    "i18n"
+  ],
+  "author": "Abou Kone",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/devakone/react-i18next-helpers/issues"
+  },
+  "homepage": "https://github.com/devakone/react-i18next-helpers#readme"
+}
