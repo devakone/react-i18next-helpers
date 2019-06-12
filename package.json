@@ -2,10 +2,14 @@
   "name": "react-i18next-helpers",
   "version": "1.0.0",
   "description": "A set of helper hooks and components to use with i18next, react-i18next and Formik",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "npm run test"
+    "test": "npm run test",
+    "prepublishOnly": "babel ./src --out-dir ./dist -s inline"
   },
+  "files": [
+    "dist/*"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/devakone/react-i18next-helpers.git"
@@ -22,5 +26,15 @@
   "bugs": {
     "url": "https://github.com/devakone/react-i18next-helpers/issues"
   },
-  "homepage": "https://github.com/devakone/react-i18next-helpers#readme"
+  "homepage": "https://github.com/devakone/react-i18next-helpers#readme",
+  "devDependencies": {
+    "@babel/cli": "^7.4.4",
+    "@babel/core": "^7.4.5",
+    "@babel/preset-env": "^7.4.5",
+    "@babel/preset-react": "^7.0.0",
+    "formik": "^1.5.7",
+    "i18next": "^17.0.3",
+    "react": "^16.8.6",
+    "react-i18next": "^10.11.0"
+  }
 }
