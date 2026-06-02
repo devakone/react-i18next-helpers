@@ -1,172 +1,111 @@
 # react-i18next-helpers
-A set of helper hooks and components to use with i18next, react-i18next and Formik; i18next makes translating a breeze in apps, and using the react-i18next opens up the API for most React Applications. However, there are blind spots like with any other libraries. These helpers are here to help you cover these blind spots.
 
-## Using Formik and translating errors
-If you use Formik and you have errors rendered on the screen, you will notice that if you change the current language, your errors remain in the language they were before the translation. This library gives you a hook you can use to make sure that when the i18n language changes, your form errors are also translated.
+A small set of compatibility helpers for apps that use React, Formik, i18next, and react-i18next.
 
-### Render Example 
+## Modern usage guidance
 
-This example is based on using the `render` method for rendering a Formik form
+These helpers are for edge cases where translations live outside normal React rendering.
 
+For most React UI, prefer calling `t(...)` during render or using `Trans` from `react-i18next`. For most Formik validation, prefer storing translation keys and values in form errors, then translating those errors during render. That approach re-renders naturally when the active language changes.
+
+Use this package when an existing app stores already-translated Formik error strings, or when sanitized dynamic HTML contains `data-i18n` tokens that React does not render directly.
+
+## Installation
+
+```sh
+npm install react-i18next-helpers
 ```
 
-...
-<Formik component={ContactForm} />;
-...
+Install the peer dependencies in your app:
 
-import useTranslateFormErrors from '../../hooks/use-translate-form-errors';
+```sh
+npm install formik i18next react react-i18next
+```
 
-const ContactForm = ({
-  handleSubmit,
-  handleChange,
-  handleBlur,
-  values,
-  errors,
-  touched,
-  setFieldTouched
-}) => {
-  
- useTranslateFormErrors(errors, touched, setFieldTouched);
+## Translate Formik errors after language changes
 
-return (
-  <form onSubmit={handleSubmit}>
-    <input
-      type="text"
-      onChange={handleChange}
-      onBlur={handleBlur}
-      value={values.name}
-      name="name"
-    />
-    {errors.name && <div>{errors.name}</div>}
-    <button type="submit">Submit</button>
-  </form>
+Formik validation errors can stay in the previous language after `i18n.changeLanguage()` runs if validation stores translated strings instead of translation keys. `useTranslateFormErrors` re-touches fields that already have errors and have been touched, causing Formik to validate them again.
+
+Use this helper for legacy or compatibility flows. In new code, prefer rendering errors from keys:
+
+```jsx
+{formik.errors.name && <div>{t(formik.errors.name)}</div>}
+```
+
+```jsx
+import { Formik } from 'formik';
+import { useTranslateFormErrors } from 'react-i18next-helpers';
+
+const ContactForm = formik => {
+  useTranslateFormErrors(formik.errors, formik.touched, formik.setFieldTouched);
+
+  return (
+    <form onSubmit={formik.handleSubmit}>
+      <input
+        type="text"
+        name="name"
+        onChange={formik.handleChange}
+        onBlur={formik.handleBlur}
+        value={formik.values.name}
+      />
+      {formik.errors.name && <div>{formik.errors.name}</div>}
+      <button type="submit">Submit</button>
+    </form>
+  );
+};
+
+const Example = () => (
+  <Formik initialValues={{ name: '' }} onSubmit={values => console.log(values)}>
+    {formik => <ContactForm {...formik} />}
+  </Formik>
 );
-
-}
-
 ```
 
-Just passing the `errors`, `touched`, and `setFieldTouched` FormikProps to the hook in your render method ensures that your errors will get translated if the language changes.
+You can also use `WithTranslateFormErrors` when you want a wrapper component:
 
-### HOC Example 
+```jsx
+import { Formik } from 'formik';
+import { WithTranslateFormErrors } from 'react-i18next-helpers';
 
-```
-<Formik
-  render={({ handleSubmit, handleChange, handleBlur, setFieldTouched, values, errors, touched }) => (
-    <WithTranslateFormErrors errors={errors} touched={touched} setFieldTouched={setFieldTouched}>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          onChange={handleChange}
-          onBlur={handleBlur}
-          value={values.name}
-          name="name"
-        />
-        {errors.name &&
-          <div>
-            {errors.name}
-          </div>}
-        <button type="submit">Submit</button>
-      </form>
-    </WithTranslateFormErrors>
-  )}
-/>
-
-import PropTypes from 'prop-types';
-import React, { useEffect }  from 'react';
-import { useTranslation } from 'react-i18next';
-
-const useTranslateFormErrors = (errors, touched, setFieldTouched) => {
-  const { i18n } = useTranslation();
-  useEffect(() => {
-    i18n.on('languageChanged', lng => {
-      Object.keys(errors).forEach(fieldName => {
-        if (Object.keys(touched).includes(fieldName)) {
-          setFieldTouched(fieldName);
-        }
-      });
-    });
-    return () => {
-      i18n.off('languageChanged', lng => {});
-    };
-  }, [errors]);
-};
-
-
-const WithTranslateFormErrors = ({ errors, touched, setFieldTouched,  children }) => {
-  useTranslateFormErrors(errors, touched, setFieldTouched);
-  return <>{children}</>;
-};
-
-WithTranslateFormErrors.propTypes = {
-  form: PropTypes.object
-};
-
-export default WithTranslateFormErrors;
-
-
+const Example = () => (
+  <Formik initialValues={{ name: '' }} onSubmit={values => console.log(values)}>
+    {formik => (
+      <WithTranslateFormErrors form={formik}>
+        <form onSubmit={formik.handleSubmit}>
+          <input
+            type="text"
+            name="name"
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            value={formik.values.name}
+          />
+          {formik.errors.name && <div>{formik.errors.name}</div>}
+          <button type="submit">Submit</button>
+        </form>
+      </WithTranslateFormErrors>
+    )}
+  </Formik>
+);
 ```
 
+## Translate dynamic HTML
 
+`useTranslateHtmlElement` translates elements inside dynamic HTML that use a `data-i18n` attribute. This is intended for CMS or backend-provided HTML that React does not own directly.
 
-Just passing the `errors`, `touched`, and `setFieldTouched` FormikProps to the HOC in your render method ensures that your errors will get translated if the language changes.
+For normal React content, prefer `t(...)` or `Trans`. Sanitize untrusted HTML before rendering it.
 
-## Translating raw or dynamic HTML
+```jsx
+import DOMPurify from 'dompurify';
+import { useTranslateHtmlElement } from 'react-i18next-helpers';
 
-If you're ever in need of translating HTML you're adding dynamically to your app, and to keep content in that HTML translated, you can use the `useTranslateHtmlElement` hook.
+const SafeHtml = ({ html }) => {
+  const [ref] = useTranslateHtmlElement(html);
+  const safeHtml = DOMPurify.sanitize(html);
 
+  return <div ref={ref} dangerouslySetInnerHTML={{ __html: safeHtml }} />;
+};
 ```
 
-import dompurify from 'dompurify';
-import useTranslateHtmlElement from './use-translate-html-element';
-// Our safe HTML rendering component
-// From https://dev.to/jam3/how-to-prevent-xss-attacks-when-using-dangerouslysetinnerhtml-in-react-1464
-
-function SafeHTMLComponent() {
-  // title is dynamic HTML
-  const title = response.from.backend.title;
-  // sanitizer will sanitize the HTML
-  const sanitizer = dompurify.sanitize;
-  const safeTitle = sanitizer(title);
-  const [ref] = useTranslateHtmlElement(safeTitle);
-  return
-  
-  import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
-const translateI18nTokensInHtmlElement = (i18n, htmlElement) => {
-  const i18nTokenNodes = htmlElement.querySelectorAll('[data-i18n]');
-  for (let i = 0; i < i18nTokenNodes.length; i++) {
-    i18nTokenNodes[i].innerHTML = i18n.t(i18nTokenNodes[i].getAttribute('data-i18n'));
-  }
-};
-
-const useTranslateHtmlElement = html => {
-  const { i18n } = useTranslation();
-  const [node, setRef] = useState(null);
-  const translateIfNodeRendered = node => {
-    if (node) {
-      translateI18nTokensInHtmlElement(i18n, node);
-    }
-  };
-  useEffect(() => {
-    translateIfNodeRendered(node);
-
-    i18n.on('languageChanged', lng => {
-      translateIfNodeRendered(node);
-    });
-    return () => {
-      i18n.off('languageChanged', lng => {});
-    };
-  }, [html]);
-  return [setRef];
-};
-
-export default useTranslateHtmlElement;
-
+```html
+<span data-i18n="profile.greeting"></span>
 ```
-
-
-
-
-The example is self explanatory. 
