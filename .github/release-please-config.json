@@ -1,0 +1,8 @@
+{
+  "packages": {
+    ".": {
+      "package-name": "react-i18next-helpers",
+      "release-type": "node"
+    }
+  }
+}
