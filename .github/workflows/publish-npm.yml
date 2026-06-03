@@ -1,0 +1,98 @@
+name: Publish npm package
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  validate-pr-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+
+      - name: Upgrade npm and install Yarn
+        run: npm install --global npm@11.5.1 yarn@1.22.22
+
+      - name: Verify npm version
+        run: npm --version
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile --ignore-engines
+
+      - name: Build package
+        run: npm run prepublishOnly
+
+      - name: Check package contents
+        run: npm pack --dry-run
+
+  release-please-on-main:
+    if: github.event_name == 'push'
+    needs: validate-pr-and-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create release PR or tag
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: .github/release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish-release:
+    if: needs.release-please-on-main.outputs.release_created == 'true'
+    needs: release-please-on-main
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          registry-url: https://registry.npmjs.org
+
+      - name: Upgrade npm and install Yarn
+        run: npm install --global npm@11.5.1 yarn@1.22.22
+
+      - name: Verify npm version
+        run: npm --version
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile --ignore-engines
+
+      - name: Build package
+        run: npm run prepublishOnly
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
