@@ -1,21 +1,24 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
-// When change language is triggered, re-validate the form as to get all errors translated
 const useTranslateFormErrors = (errors, touched, setFieldTouched) => {
   const { i18n } = useTranslation();
+
   useEffect(() => {
-    i18n.on('languageChanged', lng => {
+    const handleLanguageChanged = () => {
       Object.keys(errors).forEach(fieldName => {
         if (Object.keys(touched).includes(fieldName)) {
-          setFieldTouched(fieldName);
+          setFieldTouched(fieldName, true, true);
         }
       });
-    });
-    return () => {
-      i18n.off('languageChanged', lng => {});
     };
-  }, [errors]);
+
+    i18n.on('languageChanged', handleLanguageChanged);
+
+    return () => {
+      i18n.off('languageChanged', handleLanguageChanged);
+    };
+  }, [errors, i18n, setFieldTouched, touched]);
 };
 
 export default useTranslateFormErrors;
